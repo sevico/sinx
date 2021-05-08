@@ -1,6 +1,6 @@
 package main
 
-import "sinx/snet"
+import "github.com/sevico/sinx/snet"
 
 func main() {
 	s:=snet.NewServer("[sinx V0.1]")

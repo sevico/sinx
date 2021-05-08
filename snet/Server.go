@@ -1,9 +1,10 @@
 package snet
 
 import (
+	"errors"
 	"fmt"
+	"github.com/sevico/sinx/siface"
 	"net"
-	"sinx/siface"
 )
 
 type Server struct {
@@ -13,6 +14,31 @@ type Server struct {
 	Port int
 }
 
+func CallBackToClient(conn *net.TCPConn,data []byte,cnt int) error{
+	fmt.Println("[Conn Handle] CallbackToClient...")
+	if _,err:=conn.Write(data[:cnt]);err!=nil{
+		fmt.Println("write back buf err",err)
+		return errors.New("CallBackToClient error")
+
+	}
+	return nil
+}
+//go func() {
+//	for {
+//		buf:=make([]byte,512)
+//		cnt,err:=conn.Read(buf)
+//		if err!=nil{
+//			fmt.Println("Read err, ",err)
+//			continue
+//		}
+//		fmt.Printf("recv client buf %s cnt %d\n",buf,cnt)
+//		if _,err:= conn.Write(buf[:cnt]);err!=nil{
+//			fmt.Println("Write err, ",err)
+//			continue
+//		}
+//
+//	}
+//}()
 func (s *Server) Start() {
 	fmt.Printf("[Start] Server Listener at IP: %s, Port %d, is starting\n",s.IP,s.Port)
 
@@ -28,30 +54,21 @@ func (s *Server) Start() {
 			return
 		}
 		fmt.Println("start Sinx server succ, ",s.Name,", listening")
+		var cid uint32
+		cid=0
+
 		for {
 
-			conn,err:= listener.Accept()
+			conn,err:= listener.AcceptTCP()
 			if err!=nil{
 				fmt.Println("Accept err, ",err)
 				continue
 			}
 
-			go func() {
-				for {
-					buf:=make([]byte,512)
-					cnt,err:=conn.Read(buf)
-					if err!=nil{
-						fmt.Println("Read err, ",err)
-						continue
-					}
+			dealConn:=NewConnection(conn,cid,CallBackToClient)
 
-					if _,err:= conn.Write(buf[:cnt]);err!=nil{
-						fmt.Println("Write err, ",err)
-						continue
-					}
-
-				}
-			}()
+			cid++
+			dealConn.Start()
 		}
 	}()
 
