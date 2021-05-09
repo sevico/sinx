@@ -12,6 +12,11 @@ type Server struct {
 	IPVersion string
 	IP string
 	Port int
+	Router siface.IRouter
+}
+
+func (s *Server) AddRouter(router siface.IRouter) {
+	s.Router=router
 }
 
 func CallBackToClient(conn *net.TCPConn,data []byte,cnt int) error{
@@ -65,7 +70,7 @@ func (s *Server) Start() {
 				continue
 			}
 
-			dealConn:=NewConnection(conn,cid,CallBackToClient)
+			dealConn:=NewConnection(conn,cid,s.Router)
 
 			cid++
 			dealConn.Start()
@@ -96,6 +101,7 @@ func NewServer(name string) siface.IServer{
 		IPVersion: "tcp4",
 		IP: "0.0.0.0",
 		Port: 8999,
+		Router: nil,
 	}
 	return s
 

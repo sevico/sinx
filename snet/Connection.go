@@ -13,9 +13,10 @@ type Connection struct{
 
 	isClosed bool
 
-	HandleAPI siface.HandleFunc
+	//HandleAPI siface.HandleFunc
 	ExitChan chan bool
 
+	Router siface.IRouter
 }
 
 func (c *Connection) Reader(){
@@ -24,15 +25,25 @@ func (c *Connection) Reader(){
 	defer c.Stop()
 	for  {
 		buf:=make([]byte,512)
-		cnt,err:=c.Conn.Read(buf)
+		_,err:=c.Conn.Read(buf)
 		if err!=nil{
 			fmt.Println("recv buf err ",err)
 			continue
 		}
-		if err:= c.HandleAPI(c.Conn,buf,cnt);err!=nil{
-			fmt.Println("ConnID",c.ConnID," handle is error ",err)
-			break
+
+		req:=&Request{
+			conn: c,
+			data: buf,
 		}
+		go func(request siface.IRequest) {
+			c.Router.PreHandle(request)
+			c.Router.Handle(request)
+			c.Router.PostHandle(request)
+		}(req)
+		//if err:= c.HandleAPI(c.Conn,buf,cnt);err!=nil{
+		//	fmt.Println("ConnID",c.ConnID," handle is error ",err)
+		//	break
+		//}
 
 	}
 
@@ -70,13 +81,14 @@ func (c *Connection) Send(data []byte) error {
 	return nil
 }
 
-func NewConnection(conn *net.TCPConn,connID uint32,callbackAPI siface.HandleFunc) *Connection{
+func NewConnection(conn *net.TCPConn,connID uint32,router siface.IRouter) *Connection{
 	c:=&Connection{
 		Conn: conn,
 		ConnID: connID,
-		HandleAPI: callbackAPI,
+		//HandleAPI: callbackAPI,
 		isClosed: false,
 		ExitChan: make(chan bool,1),
+		Router:router,
 	}
 	return c
 
